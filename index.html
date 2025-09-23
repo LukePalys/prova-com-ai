@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Provas com IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 antialiased">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">Gerador de Provas com IA</h1>
+            <p class="text-lg text-gray-600 mt-2">Envie seus materiais de estudo e crie uma prova personalizada.</p>
+        </header>
+
+        <main id="setup-section" class="bg-white p-6 md:p-8 rounded-xl shadow-lg transition-all">
+            <h2 class="text-2xl font-semibold mb-4">1. Configure sua Prova</h2>
+            
+            <div class="mb-6">
+                <label for="file-upload" class="block text-md font-medium text-gray-700 mb-2">Anexe seus arquivos de estudo:</label>
+                <input id="file-upload" type="file" multiple class="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100 cursor-pointer"/>
+                <p class="text-xs text-gray-500 mt-1">Aviso: Apenas o conteúdo de arquivos de texto (.txt, .md, .csv, etc.) será lido.</p>
+                <div id="file-list" class="mt-2 text-sm text-gray-600"></div>
+            </div>
+
+            <div class="mb-6">
+                <label for="num-questions" class="block text-md font-medium text-gray-700">Número de questões:</label>
+                <input id="num-questions" type="number" value="5" min="1" max="50" class="mt-1 block w-full md:w-1/4 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+
+            <button id="generate-quiz-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Gerar Prova
+            </button>
+            
+            <div id="loader" class="hidden mt-6 flex flex-col items-center">
+                <div class="spinner"></div>
+                <p id="loader-text" class="mt-2 text-gray-600">Aguarde, a IA está preparando sua prova...</p>
+            </div>
+
+            <div id="error-message" class="hidden mt-4 p-4 bg-red-100 text-red-700 rounded-lg"></div>
+        </main>
+
+        <section id="quiz-section" class="hidden bg-white p-6 md:p-8 mt-8 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-semibold mb-6 border-b pb-4">2. Responda as Questões</h2>
+            <div id="quiz-container" class="space-y-8"></div>
+            <div class="mt-8 pt-6 border-t">
+                <button id="submit-quiz-btn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-transform transform hover:scale-105">
+                    Verificar Respostas
+                </button>
+            </div>
+        </section>
+
+        <section id="results-section" class="hidden p-0 md:p-8 mt-8">
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center sticky top-4 z-10">
+                <h2 class="text-3xl font-bold mb-2">Prova Finalizada!</h2>
+                <p id="score" class="text-2xl font-semibold text-gray-700 mb-4"></p>
+                <button id="restart-btn" class="w-full md:w-auto bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105">
+                    Fazer Outra Prova
+                </button>
+            </div>
+            
+            <div id="review-container" class="mt-8 text-left">
+                <h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Revisão Detalhada</h3>
+                <!-- O conteúdo da revisão será inserido aqui via JavaScript -->
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // --- Elementos do DOM ---
+        const setupSection = document.getElementById('setup-section');
+        const quizSection = document.getElementById('quiz-section');
+        const resultsSection = document.getElementById('results-section');
+        const fileUpload = document.getElementById('file-upload');
+        const fileList = document.getElementById('file-list');
+        const numQuestionsInput = document.getElementById('num-questions');
+        const generateBtn = document.getElementById('generate-quiz-btn');
+        const submitBtn = document.getElementById('submit-quiz-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const quizContainer = document.getElementById('quiz-container');
+        const loader = document.getElementById('loader');
+        const loaderText = document.getElementById('loader-text');
+        const errorMessage = document.getElementById('error-message');
+        const scoreElement = document.getElementById('score');
+
+        // --- Configurações da API ---
+        const API_KEY = "sk-NzuE1bWnF5RYvgmGOAorEAihu7Y7KZh8t3lEJO6756fIxycx";
+        const BASE_URL = "https://api.chatanywhere.tech/v1/chat/completions";
+
+        let quizData = [];
+        
+        fileUpload.addEventListener('change', () => {
+            fileList.innerHTML = '';
+            if(fileUpload.files.length > 0) {
+                const files = Array.from(fileUpload.files).map(f => f.name).join(', ');
+                fileList.innerHTML = `<strong>Arquivos selecionados:</strong> ${files}`;
+            }
+        });
+
+        // --- Funções ---
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            loader.classList.add('hidden');
+            generateBtn.disabled = false;
+        }
+
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+
+        /**
+         * NOVA FUNÇÃO: Divide um texto longo em pedaços menores.
+         * Tenta dividir em quebras de linha para manter a coerência.
+         * @param {string} text - O texto completo a ser dividido.
+         * @param {number} maxSize - O tamanho máximo de cada pedaço (em caracteres).
+         * @returns {string[]} - Um array com os pedaços de texto.
+         */
+        function chunkText(text, maxSize = 10000) { // Limite de caracteres para segurança
+            const chunks = [];
+            let currentChunk = "";
+            const sentences = text.split('\n'); // Tenta dividir por linhas primeiro
+
+            for (const sentence of sentences) {
+                if ((currentChunk.length + sentence.length + 1) > maxSize) {
+                    if (currentChunk.length > 0) {
+                        chunks.push(currentChunk);
+                    }
+                    currentChunk = sentence;
+                } else {
+                    currentChunk += (currentChunk.length > 0 ? '\n' : '') + sentence;
+                }
+            }
+
+            if (currentChunk.length > 0) {
+                chunks.push(currentChunk);
+            }
+
+            return chunks;
+        }
+
+        async function handleGenerateQuiz() {
+            hideError();
+            const files = fileUpload.files;
+            const totalQuestions = parseInt(numQuestionsInput.value, 10);
+
+            if (files.length === 0) {
+                showError("Por favor, selecione pelo menos um arquivo.");
+                return;
+            }
+
+            generateBtn.disabled = true;
+            loader.classList.remove('hidden');
+            loaderText.textContent = 'Lendo e processando seus arquivos...';
+
+            try {
+                const combinedText = await readFilesAsText(files);
+                if (!combinedText.trim()) {
+                    throw new Error("Não foi possível ler o conteúdo de texto dos arquivos. Por favor, use arquivos de texto simples (.txt, .md, etc).");
+                }
+                
+                // *** LÓGICA ATUALIZADA PARA LIDAR COM TEXTOS GRANDES ***
+                const textChunks = chunkText(combinedText);
+                const numChunks = textChunks.length;
+                let allGeneratedQuestions = [];
+                
+                // Distribui o número de questões entre os pedaços de texto
+                const questionsPerChunk = Math.ceil(totalQuestions / numChunks);
+
+                for (let i = 0; i < numChunks; i++) {
+                    const chunk = textChunks[i];
+                    loaderText.textContent = `A IA está analisando o material (Parte ${i + 1} de ${numChunks})...`;
+                    
+                    const generatedQuizPart = await getQuizFromAI(chunk, questionsPerChunk);
+                    allGeneratedQuestions = allGeneratedQuestions.concat(generatedQuizPart);
+                }
+
+                // Garante que temos o número exato de questões solicitadas
+                quizData = allGeneratedQuestions.slice(0, totalQuestions); 
+                displayQuiz(quizData);
+
+            } catch (error) {
+                console.error("Erro ao gerar a prova:", error);
+                showError(error.message || "Ocorreu um erro desconhecido. Tente novamente.");
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        function readFilesAsText(files) {
+            return new Promise((resolve) => {
+                let combinedText = '';
+                let filesToRead = files.length;
+                if (filesToRead === 0) resolve('');
+
+                for (const file of files) {
+                    if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.csv')) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            combinedText += `\n\n--- Conteúdo do arquivo: ${file.name} ---\n\n` + e.target.result;
+                            filesToRead--;
+                            if (filesToRead === 0) resolve(combinedText);
+                        };
+                        reader.onerror = () => {
+                             console.warn(`Não foi possível ler o arquivo ${file.name}.`);
+                            filesToRead--;
+                            if (filesToRead === 0) resolve(combinedText);
+                        };
+                        reader.readAsText(file);
+                    } else {
+                        console.warn(`Arquivo '${file.name}' ignorado por não ser um tipo de texto conhecido.`);
+                        filesToRead--;
+                        if (filesToRead === 0) resolve(combinedText);
+                    }
+                }
+            });
+        }
+        
+        async function getQuizFromAI(text, numQuestions) {
+            const prompt = `
+                Haja como um professor universitário rigoroso e experiente.
+                Use exclusivamente o material fornecido abaixo para criar uma prova com exatamente ${numQuestions} questões de múltipla escolha.
+                
+                REGRAS ESTRITAS:
+                1. Cada questão deve ter 4 opções: a, b, c, d.
+                2. Para cada questão, forneça uma dica útil, mas que não entregue a resposta diretamente.
+                3. A resposta correta deve ser claramente indicada.
+                4. As perguntas devem ser desafiadoras e baseadas nos detalhes do texto.
+                5. Sua resposta DEVE SER um objeto JSON válido, contendo uma única chave "questoes", que é um array de objetos.
+                6. Cada objeto no array deve ter as chaves: "pergunta", "opcoes" (um objeto com chaves "a", "b", "c", "d"), "resposta_correta" (a letra da opção correta, ex: "a"), e "dica".
+                
+                MATERIAL DE ESTUDO:
+                ---
+                ${text}
+                ---
+            `;
+
+            const payload = {
+                model: "gpt-3.5-turbo",
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.5,
+                response_format: { type: "json_object" }
+            };
+            
+            const response = await fetch(BASE_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.json();
+                console.error("Erro da API:", errorBody);
+                throw new Error(`Erro na comunicação com a API: ${errorBody.error.message || response.statusText}`);
+            }
+
+            const data = await response.json();
+            
+            try {
+                const content = JSON.parse(data.choices[0].message.content);
+                if (!content.questoes || !Array.isArray(content.questoes)) {
+                    throw new Error("Formato de JSON inesperado recebido da IA.");
+                }
+                return content.questoes;
+            } catch (e) {
+                console.error("Erro ao parsear JSON da IA:", e);
+                console.log("Resposta bruta da IA:", data.choices[0].message.content);
+                throw new Error("A IA retornou uma resposta em um formato inválido. Tente novamente.");
+            }
+        }
+        
+        function displayQuiz(quiz) {
+            quizContainer.innerHTML = '';
+            if (quiz.length === 0) {
+                 showError("A IA não conseguiu gerar questões com o material fornecido. Tente usar arquivos diferentes ou mais detalhados.");
+                 handleRestart(); // volta para a tela inicial
+                 return;
+            }
+
+            quiz.forEach((q, index) => {
+                const optionsHTML = Object.entries(q.opcoes).map(([key, value]) => `
+                    <label class="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                        <input type="radio" name="question-${index}" value="${key}" class="mr-3">
+                        <span class="font-medium">${key.toUpperCase()})</span> ${value}
+                    </label>
+                `).join('');
+
+                const questionElement = document.createElement('div');
+                questionElement.className = 'question-block';
+                questionElement.innerHTML = `
+                    <p class="text-lg font-semibold mb-4">${index + 1}. ${q.pergunta}</p>
+                    <div class="space-y-3">${optionsHTML}</div>
+                    <button class="hint-btn mt-4 text-sm text-blue-600 hover:underline">Mostrar Dica</button>
+                    <p class="hint-text hidden mt-2 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-sm">${q.dica}</p>
+                `;
+                quizContainer.appendChild(questionElement);
+            });
+            
+            document.querySelectorAll('.hint-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const hint = btn.nextElementSibling;
+                    hint.classList.toggle('hidden');
+                    btn.textContent = hint.classList.contains('hidden') ? 'Mostrar Dica' : 'Ocultar Dica';
+                });
+            });
+
+            setupSection.classList.add('hidden');
+            quizSection.classList.remove('hidden');
+        }
+        
+        function handleSubmitQuiz() {
+            let score = 0;
+            const reviewContainer = document.getElementById('review-container');
+            reviewContainer.innerHTML = ''; // Limpa resultados anteriores
+
+            // Coleta todas as respostas do usuário
+            const userAnswers = quizData.map((_, index) => {
+                const selected = document.querySelector(`input[name="question-${index}"]:checked`);
+                return selected ? selected.value : null;
+            });
+
+            // Calcula a pontuação
+            userAnswers.forEach((answer, index) => {
+                if (answer === quizData[index].resposta_correta) {
+                    score++;
+                }
+            });
+
+            // Exibe a pontuação
+            scoreElement.textContent = `Você acertou ${score} de ${quizData.length}!`;
+
+            // Constrói a seção de revisão detalhada
+            quizData.forEach((q, index) => {
+                const userAnswer = userAnswers[index];
+                const correctAnswer = q.resposta_correta;
+
+                const optionsHTML = Object.entries(q.opcoes).map(([key, value]) => {
+                    let itemClass = 'p-3 rounded-lg border';
+                    const isCorrect = key === correctAnswer;
+                    const isSelected = key === userAnswer;
+
+                    if (isCorrect) {
+                        itemClass += ' bg-green-100 border-green-400 font-bold';
+                    } else if (isSelected && !isCorrect) {
+                        itemClass += ' bg-red-100 border-red-400 line-through';
+                    } else {
+                        itemClass += ' border-gray-200 text-gray-600';
+                    }
+                    
+                    return `<li class="${itemClass}">${key.toUpperCase()}) ${value}</li>`;
+                }).join('');
+
+                const questionReviewHTML = `
+                    <div class="mb-6 p-4 border rounded-lg bg-white shadow-sm">
+                        <p class="text-lg font-semibold mb-4">${index + 1}. ${q.pergunta}</p>
+                        <ul class="space-y-3">${optionsHTML}</ul>
+                        ${userAnswer !== correctAnswer && userAnswer !== null ? `<p class="mt-4 text-sm text-red-700 p-2 bg-red-50 rounded-md">Sua resposta (${userAnswer.toUpperCase()}) está incorreta. A resposta correta é <strong>${correctAnswer.toUpperCase()}</strong>.</p>` : ''}
+                        ${userAnswer === correctAnswer ? `<p class="mt-4 text-sm text-green-700 p-2 bg-green-50 rounded-md">Você acertou!</p>` : ''}
+                        ${userAnswer === null ? `<p class="mt-4 text-sm text-yellow-800 p-2 bg-yellow-50 rounded-md">Você não respondeu a esta questão. A resposta correta é <strong>${correctAnswer.toUpperCase()}</strong>.</p>` : ''}
+                    </div>
+                `;
+                reviewContainer.innerHTML += questionReviewHTML;
+            });
+
+            quizSection.classList.add('hidden');
+            resultsSection.classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+        
+        function handleRestart() {
+            quizData = [];
+            fileUpload.value = '';
+            fileList.innerHTML = '';
+            numQuestionsInput.value = '5';
+            quizContainer.innerHTML = '';
+            document.getElementById('review-container').innerHTML = ''; // Limpa a revisão
+            
+            resultsSection.classList.add('hidden');
+            setupSection.classList.add('hidden');
+            setupSection.classList.remove('hidden'); // Corrigido para voltar à tela inicial
+            generateBtn.disabled = false;
+            hideError();
+        }
+
+        generateBtn.addEventListener('click', handleGenerateQuiz);
+        submitBtn.addEventListener('click', handleSubmitQuiz);
+        restartBtn.addEventListener('click', handleRestart);
+
+    </script>
+</body>
+</html>
