@@ -1,424 +1,1128 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de Provas com IA</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: #09f;
-            animation: spin 1s ease infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .hidden {
-            display: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Provas com IA</title>
+<meta name="description" content="Gere provas personalizadas a partir dos seus arquivos de estudo usando IA. Grátis, sem login, funciona no navegador.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --bg-0: #0a0a0f;
+    --bg-1: #13131a;
+    --bg-2: #1a1a24;
+    --bg-3: #232333;
+    --border: #2a2a3a;
+    --text: #e4e4ef;
+    --text-dim: #8888a0;
+    --accent: #a855f7;
+    --accent-2: #ec4899;
+    --accent-3: #06b6d4;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+  }
+  html { color-scheme: dark; }
+  body {
+    margin: 0;
+    background: var(--bg-0);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 80% 0%, rgba(168, 85, 247, 0.15), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 0% 100%, rgba(236, 72, 153, 0.1), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 10px 30px -8px var(--accent);
+  }
+  .logo h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .logo p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  select.lang-select {
+    padding: 8px 30px 8px 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-2) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238888a0'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 8px center / 16px;
+    color: var(--text);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    appearance: none;
+  }
+  select.lang-select:hover { border-color: var(--accent); }
+
+  /* Cards */
+  .card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card h2 .num {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* Form */
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+  }
+  textarea, input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+    color: var(--text);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+  textarea:focus, input:focus {
+    border-color: var(--accent);
+  }
+  textarea {
+    min-height: 100px;
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .row {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (max-width: 640px) {
+    .row { grid-template-columns: 1fr; }
+  }
+
+  /* File upload */
+  .file-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg-2);
+  }
+  .file-zone:hover, .file-zone.dragging {
+    border-color: var(--accent);
+    background: rgba(168, 85, 247, 0.05);
+  }
+  .file-zone input { display: none; }
+  .file-zone-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+  .file-zone-text {
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .file-zone-text strong { color: var(--accent); }
+  .file-list {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  .file-item button {
+    background: transparent;
+    border: none;
+    color: var(--error);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+  }
+
+  /* Button */
+  .btn {
+    padding: 14px 24px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn:hover {
+    box-shadow: 0 10px 30px -8px var(--accent);
+    transform: translateY(-1px);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  .btn-secondary {
+    background: var(--bg-3);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: none;
+    transform: none;
+  }
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Loading */
+  .loading {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(168, 85, 247, 0.08);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .loading.show { display: flex; }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(168, 85, 247, 0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--accent); font-size: 14px; font-weight: 500; }
+
+  /* Quiz display */
+  .quiz-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-dim);
+  }
+  .quiz-empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+
+  .question {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .question-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .question-num {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .question-text {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-left: 40px;
+  }
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+  }
+  .option:hover { border-color: var(--accent); background: rgba(168, 85, 247, 0.05); }
+  .option input { margin-top: 3px; accent-color: var(--accent); }
+  .option.correct {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--success);
+    color: var(--success);
+  }
+  .option.wrong {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--error);
+    color: var(--error);
+  }
+  .option-letter {
+    font-weight: 700;
+    color: var(--accent);
+    margin-right: 4px;
+  }
+
+  .score-card {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(236, 72, 153, 0.1));
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .score-card h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  .score-value {
+    font-size: 48px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .explanation {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(6, 182, 212, 0.05);
+    border-left: 3px solid var(--accent-3);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .explanation strong { color: var(--accent-3); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    padding: 12px 20px;
+    background: var(--bg-3);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 100;
+    transition: transform 0.3s ease;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    margin-top: 40px;
+    padding: 24px;
+    color: var(--text-dim);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  /* Print friendly */
+  @media print {
+    body::before { display: none; }
+    .btn, .btn-row, select.lang-select, .file-zone { display: none !important; }
+    .card { border: none; padding: 0; }
+  }
+</style>
 </head>
-<body class="bg-gray-100 text-gray-800 antialiased">
+<body>
 
-    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-900">Gerador de Provas com IA</h1>
-            <p class="text-lg text-gray-600 mt-2">Envie seus materiais de estudo e crie uma prova personalizada.</p>
-        </header>
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📝</div>
+      <div>
+        <h1 data-i18n="title">Gerador de Provas com IA</h1>
+        <p data-i18n="subtitle">Estude inteligente — a IA cria provas personalizadas pra você</p>
+      </div>
+    </div>
+    <select class="lang-select" id="langSelect">
+      <option value="pt-BR">🇧🇷 PT-BR</option>
+      <option value="en">🇺🇸 EN</option>
+      <option value="es">🇪🇸 ES</option>
+      <option value="fr">🇫🇷 FR</option>
+      <option value="de">🇩🇪 DE</option>
+      <option value="it">🇮🇹 IT</option>
+      <option value="ja">🇯🇵 JP</option>
+      <option value="zh-CN">🇨🇳 ZH</option>
+    </select>
+  </header>
 
-        <main id="setup-section" class="bg-white p-6 md:p-8 rounded-xl shadow-lg transition-all">
-            <h2 class="text-2xl font-semibold mb-4">1. Configure sua Prova</h2>
-            
-            <div class="mb-6">
-                <label for="file-upload" class="block text-md font-medium text-gray-700 mb-2">Anexe seus arquivos de estudo:</label>
-                <input id="file-upload" type="file" multiple class="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-50 file:text-blue-700
-                    hover:file:bg-blue-100 cursor-pointer"/>
-                <p class="text-xs text-gray-500 mt-1">Aviso: Apenas o conteúdo de arquivos de texto (.txt, .md, .csv, etc.) será lido.</p>
-                <div id="file-list" class="mt-2 text-sm text-gray-600"></div>
-            </div>
+  <!-- Step 1: Configuration -->
+  <div class="card">
+    <h2><span class="num">1</span> <span data-i18n="step1">Configure sua prova</span></h2>
 
-            <div class="mb-6">
-                <label for="num-questions" class="block text-md font-medium text-gray-700">Número de questões:</label>
-                <input id="num-questions" type="number" value="5" min="1" max="50" class="mt-1 block w-full md:w-1/4 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-            </div>
+    <label data-i18n="topic-label">Tópico da prova (opcional se você anexar arquivos)</label>
+    <input type="text" id="topic" data-i18n-ph="topic-ph" placeholder="Ex.: História do Brasil, Álgebra, Biologia celular...">
 
-            <button id="generate-quiz-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                Gerar Prova
-            </button>
-            
-            <div id="loader" class="hidden mt-6 flex flex-col items-center">
-                <div class="spinner"></div>
-                <p id="loader-text" class="mt-2 text-gray-600">Aguarde, a IA está preparando sua prova...</p>
-            </div>
+    <div style="height: 16px;"></div>
 
-            <div id="error-message" class="hidden mt-4 p-4 bg-red-100 text-red-700 rounded-lg"></div>
-        </main>
+    <label data-i18n="files-label">Anexe seus arquivos de estudo (.txt, .md, .csv)</label>
+    <label class="file-zone" for="fileInput">
+      <div class="file-zone-icon">📎</div>
+      <div class="file-zone-text">
+        <strong data-i18n="files-click">Clique pra selecionar</strong>
+        <span data-i18n="files-or"> ou arraste arquivos aqui</span>
+      </div>
+      <input type="file" id="fileInput" multiple accept=".txt,.md,.csv,.json,.log">
+    </label>
+    <div class="file-list" id="fileList"></div>
 
-        <section id="quiz-section" class="hidden bg-white p-6 md:p-8 mt-8 rounded-xl shadow-lg">
-            <h2 class="text-2xl font-semibold mb-6 border-b pb-4">2. Responda as Questões</h2>
-            <div id="quiz-container" class="space-y-8"></div>
-            <div class="mt-8 pt-6 border-t">
-                <button id="submit-quiz-btn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-transform transform hover:scale-105">
-                    Verificar Respostas
-                </button>
-            </div>
-        </section>
+    <div style="height: 16px;"></div>
 
-        <section id="results-section" class="hidden p-0 md:p-8 mt-8">
-            <div class="bg-white p-6 rounded-xl shadow-lg text-center sticky top-4 z-10">
-                <h2 class="text-3xl font-bold mb-2">Prova Finalizada!</h2>
-                <p id="score" class="text-2xl font-semibold text-gray-700 mb-4"></p>
-                <button id="restart-btn" class="w-full md:w-auto bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105">
-                    Fazer Outra Prova
-                </button>
-            </div>
-            
-            <div id="review-container" class="mt-8 text-left">
-                <h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Revisão Detalhada</h3>
-                <!-- O conteúdo da revisão será inserido aqui via JavaScript -->
-            </div>
-        </section>
+    <div class="row">
+      <div>
+        <label data-i18n="num-label">Número de questões</label>
+        <input type="number" id="numQuestions" value="5" min="1" max="15">
+      </div>
+      <div>
+        <label data-i18n="level-label">Nível de dificuldade</label>
+        <select id="level" class="lang-select" style="width: 100%;">
+          <option value="easy" data-i18n="level-easy">Fácil</option>
+          <option value="medium" selected data-i18n="level-medium">Médio</option>
+          <option value="hard" data-i18n="level-hard">Difícil</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Generate -->
+  <div class="card">
+    <h2><span class="num">2</span> <span data-i18n="step2">Gere e responda</span></h2>
+
+    <div class="btn-row">
+      <button class="btn" id="generateBtn">
+        <span>✨</span>
+        <span data-i18n="generate">Gerar prova com IA</span>
+      </button>
+      <button class="btn btn-secondary" id="clearBtn">
+        <span>🗑️</span>
+        <span data-i18n="clear">Limpar</span>
+      </button>
     </div>
 
-    <script>
-        // --- Elementos do DOM ---
-        const setupSection = document.getElementById('setup-section');
-        const quizSection = document.getElementById('quiz-section');
-        const resultsSection = document.getElementById('results-section');
-        const fileUpload = document.getElementById('file-upload');
-        const fileList = document.getElementById('file-list');
-        const numQuestionsInput = document.getElementById('num-questions');
-        const generateBtn = document.getElementById('generate-quiz-btn');
-        const submitBtn = document.getElementById('submit-quiz-btn');
-        const restartBtn = document.getElementById('restart-btn');
-        const quizContainer = document.getElementById('quiz-container');
-        const loader = document.getElementById('loader');
-        const loaderText = document.getElementById('loader-text');
-        const errorMessage = document.getElementById('error-message');
-        const scoreElement = document.getElementById('score');
+    <div style="height: 16px;"></div>
 
-        // --- Configurações da API ---
-        const API_KEY = "sk-NzuE1bWnF5RYvgmGOAorEAihu7Y7KZh8t3lEJO6756fIxycx";
-        const BASE_URL = "https://api.chatanywhere.tech/v1/chat/completions";
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loadingText" data-i18n="loading">Gerando prova com IA...</div>
+    </div>
+  </div>
 
-        let quizData = [];
-        
-        fileUpload.addEventListener('change', () => {
-            fileList.innerHTML = '';
-            if(fileUpload.files.length > 0) {
-                const files = Array.from(fileUpload.files).map(f => f.name).join(', ');
-                fileList.innerHTML = `<strong>Arquivos selecionados:</strong> ${files}`;
-            }
-        });
+  <!-- Step 3: Quiz -->
+  <div class="card" id="quizCard" style="display: none;">
+    <h2><span class="num">3</span> <span data-i18n="step3">Prova gerada</span></h2>
 
-        // --- Funções ---
+    <div id="scoreCard" class="score-card" style="display: none;">
+      <h3 data-i18n="your-score">Sua pontuação</h3>
+      <div class="score-value" id="scoreValue">0/0</div>
+    </div>
 
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.classList.remove('hidden');
-            loader.classList.add('hidden');
-            generateBtn.disabled = false;
+    <div id="quizContent"></div>
+
+    <div class="btn-row" style="margin-top: 20px;">
+      <button class="btn" id="gradeBtn" style="display: none;">
+        <span>✅</span>
+        <span data-i18n="grade">Corrigir prova</span>
+      </button>
+      <button class="btn btn-secondary" id="newQuizBtn" style="display: none;">
+        <span>🔄</span>
+        <span data-i18n="new-quiz">Nova prova</span>
+      </button>
+      <button class="btn btn-secondary" id="printBtn" style="display: none;">
+        <span>🖨️</span>
+        <span data-i18n="print">Imprimir / PDF</span>
+      </button>
+    </div>
+  </div>
+
+  <footer>
+    <span data-i18n="footer-made">Feito com</span> 💜 <span data-i18n="footer-by">por</span> <a href="https://github.com/lukepalys" target="_blank" rel="noopener">LukePalys</a> • <span data-i18n="footer-tech">Pollinations AI · 100% no navegador</span>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== I18N =====================
+const I18N = {
+  'pt-BR': {
+    title: 'Gerador de Provas com IA',
+    subtitle: 'Estude inteligente — a IA cria provas personalizadas pra você',
+    step1: 'Configure sua prova',
+    'topic-label': 'Tópico da prova (opcional se você anexar arquivos)',
+    'topic-ph': 'Ex.: História do Brasil, Álgebra, Biologia celular...',
+    'files-label': 'Anexe seus arquivos de estudo (.txt, .md, .csv)',
+    'files-click': 'Clique pra selecionar',
+    'files-or': ' ou arraste arquivos aqui',
+    'num-label': 'Número de questões',
+    'level-label': 'Nível de dificuldade',
+    'level-easy': 'Fácil',
+    'level-medium': 'Médio',
+    'level-hard': 'Difícil',
+    step2: 'Gere e responda',
+    generate: 'Gerar prova com IA',
+    clear: 'Limpar',
+    loading: 'Gerando prova com IA...',
+    step3: 'Prova gerada',
+    'your-score': 'Sua pontuação',
+    grade: 'Corrigir prova',
+    'new-quiz': 'Nova prova',
+    print: 'Imprimir / PDF',
+    'footer-made': 'Feito com',
+    'footer-by': 'por',
+    'footer-tech': 'Pollinations AI · 100% no navegador',
+    'need-topic-or-files': 'Escolha um tópico OU anexe arquivos primeiro.',
+    'failed': 'Falha ao gerar prova. Tente novamente.',
+    'no-questions': 'A IA não conseguiu gerar questões. Tente outro tópico.',
+    'select-answers': 'Selecione todas as respostas antes de corrigir.',
+    'correct': 'Correta',
+    'wrong': 'Errada',
+    'explanation': 'Explicação',
+  },
+  en: {
+    title: 'AI Quiz Generator',
+    subtitle: 'Study smart — AI creates personalized quizzes for you',
+    step1: 'Configure your quiz',
+    'topic-label': 'Quiz topic (optional if you attach files)',
+    'topic-ph': 'E.g.: World History, Algebra, Cell Biology...',
+    'files-label': 'Attach your study files (.txt, .md, .csv)',
+    'files-click': 'Click to select',
+    'files-or': ' or drag files here',
+    'num-label': 'Number of questions',
+    'level-label': 'Difficulty level',
+    'level-easy': 'Easy',
+    'level-medium': 'Medium',
+    'level-hard': 'Hard',
+    step2: 'Generate and answer',
+    generate: 'Generate quiz with AI',
+    clear: 'Clear',
+    loading: 'Generating quiz with AI...',
+    step3: 'Quiz generated',
+    'your-score': 'Your score',
+    grade: 'Grade quiz',
+    'new-quiz': 'New quiz',
+    print: 'Print / PDF',
+    'footer-made': 'Made with',
+    'footer-by': 'by',
+    'footer-tech': 'Pollinations AI · 100% in browser',
+    'need-topic-or-files': 'Choose a topic OR attach files first.',
+    failed: 'Failed to generate quiz. Try again.',
+    'no-questions': 'AI couldn\'t generate questions. Try another topic.',
+    'select-answers': 'Select all answers before grading.',
+    'correct': 'Correct',
+    'wrong': 'Wrong',
+    'explanation': 'Explanation',
+  },
+  es: {
+    title: 'Generador de Exámenes con IA',
+    subtitle: 'Estudia inteligente — la IA crea exámenes personalizados',
+    step1: 'Configura tu examen',
+    'topic-label': 'Tema del examen (opcional si adjuntas archivos)',
+    'topic-ph': 'Ej.: Historia del Brasil, Álgebra, Biología celular...',
+    'files-label': 'Adjunta tus archivos de estudio (.txt, .md, .csv)',
+    'files-click': 'Haz clic para seleccionar',
+    'files-or': ' o arrastra archivos aquí',
+    'num-label': 'Número de preguntas',
+    'level-label': 'Nivel de dificultad',
+    'level-easy': 'Fácil',
+    'level-medium': 'Medio',
+    'level-hard': 'Difícil',
+    step2: 'Genera y responde',
+    generate: 'Generar examen con IA',
+    clear: 'Limpiar',
+    loading: 'Generando examen con IA...',
+    step3: 'Examen generado',
+    'your-score': 'Tu puntaje',
+    grade: 'Corregir examen',
+    'new-quiz': 'Nuevo examen',
+    print: 'Imprimir / PDF',
+    'footer-made': 'Hecho con',
+    'footer-by': 'por',
+    'footer-tech': 'Pollinations AI · 100% en el navegador',
+    'need-topic-or-files': 'Elige un tema O adjunta archivos primero.',
+    failed: 'Error al generar examen. Inténtalo de nuevo.',
+    'no-questions': 'La IA no pudo generar preguntas. Prueba otro tema.',
+    'select-answers': 'Selecciona todas las respuestas antes de corregir.',
+    'correct': 'Correcta',
+    'wrong': 'Incorrecta',
+    'explanation': 'Explicación',
+  },
+  fr: {
+    title: 'Générateur d\'Examens IA',
+    subtitle: 'Étudiez intelligemment — l\'IA crée des examens personnalisés',
+    step1: 'Configurez votre examen',
+    'topic-label': 'Sujet (facultatif si vous joignez des fichiers)',
+    'topic-ph': 'Ex. : Histoire, Algèbre, Biologie cellulaire...',
+    'files-label': 'Joignez vos fichiers d\'étude (.txt, .md, .csv)',
+    'files-click': 'Cliquez pour sélectionner',
+    'files-or': ' ou glissez des fichiers ici',
+    'num-label': 'Nombre de questions',
+    'level-label': 'Niveau de difficulté',
+    'level-easy': 'Facile',
+    'level-medium': 'Moyen',
+    'level-hard': 'Difficile',
+    step2: 'Générez et répondez',
+    generate: 'Générer avec l\'IA',
+    clear: 'Effacer',
+    loading: 'Génération en cours...',
+    step3: 'Examen généré',
+    'your-score': 'Votre score',
+    grade: 'Corriger',
+    'new-quiz': 'Nouvel examen',
+    print: 'Imprimer / PDF',
+    'footer-made': 'Fait avec',
+    'footer-by': 'par',
+    'footer-tech': 'Pollinations AI · 100% navigateur',
+    'need-topic-or-files': 'Choisissez un sujet OU joignez des fichiers.',
+    failed: 'Échec de génération. Réessayez.',
+    'no-questions': 'L\'IA n\'a pas pu générer de questions.',
+    'select-answers': 'Sélectionnez toutes les réponses avant de corriger.',
+    'correct': 'Correcte',
+    'wrong': 'Incorrecte',
+    'explanation': 'Explication',
+  },
+  de: {
+    title: 'KI-Prüfungsgenerator',
+    subtitle: 'Intelligent lernen — KI erstellt personalisierte Prüfungen',
+    step1: 'Prüfung konfigurieren',
+    'topic-label': 'Thema (optional bei Dateianhang)',
+    'topic-ph': 'z.B. Geschichte, Algebra, Zellbiologie...',
+    'files-label': 'Lernmaterialien anhängen (.txt, .md, .csv)',
+    'files-click': 'Klicken zum Auswählen',
+    'files-or': ' oder Dateien hierher ziehen',
+    'num-label': 'Anzahl Fragen',
+    'level-label': 'Schwierigkeitsgrad',
+    'level-easy': 'Einfach',
+    'level-medium': 'Mittel',
+    'level-hard': 'Schwer',
+    step2: 'Generieren und beantworten',
+    generate: 'Mit KI generieren',
+    clear: 'Löschen',
+    loading: 'Generierung läuft...',
+    step3: 'Prüfung erstellt',
+    'your-score': 'Ihre Punktzahl',
+    grade: 'Korrigieren',
+    'new-quiz': 'Neue Prüfung',
+    print: 'Drucken / PDF',
+    'footer-made': 'Gemacht mit',
+    'footer-by': 'von',
+    'footer-tech': 'Pollinations AI · 100% im Browser',
+    'need-topic-or-files': 'Thema wählen ODER Dateien anhängen.',
+    failed: 'Generierung fehlgeschlagen.',
+    'no-questions': 'KI konnte keine Fragen erstellen.',
+    'select-answers': 'Alle Antworten auswählen vor Korrektur.',
+    'correct': 'Richtig',
+    'wrong': 'Falsch',
+    'explanation': 'Erklärung',
+  },
+  it: {
+    title: 'Generatore di Esami IA',
+    subtitle: 'Studia in modo intelligente — l\'IA crea esami personalizzati',
+    step1: 'Configura il tuo esame',
+    'topic-label': 'Argomento (facoltativo se alleghi file)',
+    'topic-ph': 'Es.: Storia, Algebra, Biologia cellulare...',
+    'files-label': 'Allega i tuoi file di studio (.txt, .md, .csv)',
+    'files-click': 'Clicca per selezionare',
+    'files-or': ' o trascina i file qui',
+    'num-label': 'Numero di domande',
+    'level-label': 'Livello di difficoltà',
+    'level-easy': 'Facile',
+    'level-medium': 'Medio',
+    'level-hard': 'Difficile',
+    step2: 'Genera e rispondi',
+    generate: 'Genera con IA',
+    clear: 'Pulisci',
+    loading: 'Generazione in corso...',
+    step3: 'Esame generato',
+    'your-score': 'Il tuo punteggio',
+    grade: 'Correggi',
+    'new-quiz': 'Nuovo esame',
+    print: 'Stampa / PDF',
+    'footer-made': 'Fatto con',
+    'footer-by': 'da',
+    'footer-tech': 'Pollinations AI · 100% nel browser',
+    'need-topic-or-files': 'Scegli un argomento O allega file.',
+    failed: 'Generazione fallita.',
+    'no-questions': 'L\'IA non ha potuto generare domande.',
+    'select-answers': 'Seleziona tutte le risposte prima di correggere.',
+    'correct': 'Corretta',
+    'wrong': 'Sbagliata',
+    'explanation': 'Spiegazione',
+  },
+  ja: {
+    title: 'AIテストジェネレーター',
+    subtitle: 'スマートに学習 — AIが個別のテストを作成',
+    step1: 'テストを設定',
+    'topic-label': 'テーマ（ファイル添付時は省略可）',
+    'topic-ph': '例：歴史、代数、細胞生物学...',
+    'files-label': '学習ファイルを添付 (.txt, .md, .csv)',
+    'files-click': 'クリックして選択',
+    'files-or': ' またはファイルをドラッグ',
+    'num-label': '問題数',
+    'level-label': '難易度',
+    'level-easy': '簡単',
+    'level-medium': '普通',
+    'level-hard': '難しい',
+    step2: '生成して回答',
+    generate: 'AIで生成',
+    clear: 'クリア',
+    loading: '生成中...',
+    step3: 'テスト生成完了',
+    'your-score': 'スコア',
+    grade: '採点',
+    'new-quiz': '新しいテスト',
+    print: '印刷 / PDF',
+    'footer-made': '作成:',
+    'footer-by': '',
+    'footer-tech': 'Pollinations AI · 100%ブラウザ内',
+    'need-topic-or-files': 'テーマを選ぶかファイルを添付してください。',
+    failed: '生成に失敗しました。',
+    'no-questions': '問題を生成できませんでした。',
+    'select-answers': '採点前にすべて回答してください。',
+    'correct': '正解',
+    'wrong': '不正解',
+    'explanation': '解説',
+  },
+  'zh-CN': {
+    title: 'AI 测试生成器',
+    subtitle: '智能学习 — AI 为您创建个性化测试',
+    step1: '配置您的测试',
+    'topic-label': '主题（如果附加文件则可选）',
+    'topic-ph': '例如：历史、代数、细胞生物学...',
+    'files-label': '附加您的学习文件 (.txt, .md, .csv)',
+    'files-click': '点击选择',
+    'files-or': ' 或拖拽文件到此处',
+    'num-label': '问题数量',
+    'level-label': '难度级别',
+    'level-easy': '简单',
+    'level-medium': '中等',
+    'level-hard': '困难',
+    step2: '生成并回答',
+    generate: '用 AI 生成',
+    clear: '清除',
+    loading: '正在生成...',
+    step3: '测试已生成',
+    'your-score': '您的得分',
+    grade: '批改',
+    'new-quiz': '新测试',
+    print: '打印 / PDF',
+    'footer-made': '用',
+    'footer-by': '由',
+    'footer-tech': 'Pollinations AI · 100% 浏览器内',
+    'need-topic-or-files': '请选择主题或附加文件。',
+    failed: '生成失败。',
+    'no-questions': 'AI 无法生成问题。',
+    'select-answers': '批改前请选择所有答案。',
+    'correct': '正确',
+    'wrong': '错误',
+    'explanation': '解释',
+  }
+};
+
+function t(key) {
+  const lang = document.documentElement.lang || 'pt-BR';
+  return (I18N[lang] && I18N[lang][key]) || I18N['en'][key] || key;
+}
+
+function applyLang(lang) {
+  document.documentElement.lang = lang;
+  document.documentElement.setAttribute('data-lang', lang);
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const key = el.getAttribute('data-i18n-ph');
+    el.placeholder = t(key);
+  });
+  document.title = t('title');
+}
+
+// ===================== STATE =====================
+let uploadedFiles = []; // {name, content}
+let currentQuiz = null;
+
+// ===================== POLLINATIONS CALL =====================
+async function callAI(messages) {
+  const res = await fetch('https://text.pollinations.ai/openai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'openai-fast',
+      messages,
+      temperature: 0.7,
+      max_tokens: 2500,
+    }),
+  });
+  if (!res.ok) throw new Error('Pollinations error: ' + res.status);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// ===================== FILE HANDLING =====================
+function renderFileList() {
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+  uploadedFiles.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    item.innerHTML = `
+      <span>📄 ${f.name} <span style="color:var(--text-dim);font-size:11px">(${f.content.length} chars)</span></span>
+      <button onclick="removeFile(${i})" title="Remove">×</button>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function removeFile(i) {
+  uploadedFiles.splice(i, 1);
+  renderFileList();
+}
+
+function handleFiles(files) {
+  Array.from(files).forEach(file => {
+    if (file.size > 500 * 1024) {
+      showToast(`⚠️ ${file.name} muito grande (máx 500KB)`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      uploadedFiles.push({ name: file.name, content: e.target.result });
+      renderFileList();
+    };
+    reader.readAsText(file);
+  });
+}
+
+// ===================== QUIZ GENERATION =====================
+async function generateQuiz() {
+  const topic = document.getElementById('topic').value.trim();
+  const numQ = parseInt(document.getElementById('numQuestions').value) || 5;
+  const level = document.getElementById('level').value;
+
+  if (!topic && uploadedFiles.length === 0) {
+    showToast(t('need-topic-or-files'));
+    return;
+  }
+
+  // Build context
+  let context = '';
+  if (uploadedFiles.length > 0) {
+    context = uploadedFiles.map(f => `=== ${f.name} ===\n${f.content.slice(0, 3000)}`).join('\n\n');
+  }
+
+  const lang = document.documentElement.lang || 'pt-BR';
+  const langName = { 'pt-BR': 'Portuguese (Brazil)', en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', ja: 'Japanese', 'zh-CN': 'Chinese (Simplified)' }[lang] || 'English';
+
+  const systemPrompt = `You are a quiz generator. Create educational quizzes in ${langName}. Always respond with valid JSON only — no markdown, no code blocks, just the JSON object.`;
+
+  const userPrompt = `Create a quiz with the following specifications:
+- Number of questions: ${numQ}
+- Difficulty: ${level}
+- Topic: ${topic || '(derived from the study files)'}
+${context ? `- Study material context:\n${context.slice(0, 6000)}` : ''}
+
+Each question should have 4 options (a, b, c, d) with exactly one correct answer.
+Include a brief explanation for why the correct answer is right.
+
+Respond ONLY with this JSON format (no markdown, no code fences):
+{
+  "questions": [
+    {
+      "question": "The question text",
+      "options": {
+        "a": "Option A text",
+        "b": "Option B text",
+        "c": "Option C text",
+        "d": "Option D text"
+      },
+      "correct": "a",
+      "explanation": "Brief explanation why 'a' is correct"
+    }
+  ]
+}`;
+
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('generateBtn').disabled = true;
+
+  try {
+    const response = await callAI([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ]);
+
+    // Parse JSON (handle markdown fences if AI added them)
+    let cleaned = response.replace(/^```json?\s*|\s*```$/g, '').trim();
+    const quiz = JSON.parse(cleaned);
+
+    if (!quiz.questions || !Array.isArray(quiz.questions) || quiz.questions.length === 0) {
+      throw new Error('No questions in response');
+    }
+
+    currentQuiz = quiz;
+    renderQuiz(quiz);
+  } catch (err) {
+    console.error('Generate error:', err);
+    showToast(t('failed'));
+  } finally {
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('generateBtn').disabled = false;
+  }
+}
+
+function renderQuiz(quiz) {
+  document.getElementById('quizCard').style.display = 'block';
+  const content = document.getElementById('quizContent');
+  content.innerHTML = '';
+
+  quiz.questions.forEach((q, i) => {
+    const qDiv = document.createElement('div');
+    qDiv.className = 'question';
+    qDiv.dataset.correct = q.correct;
+    qDiv.innerHTML = `
+      <div class="question-header">
+        <div class="question-num">${i + 1}</div>
+        <div class="question-text">${escapeHtml(q.question)}</div>
+      </div>
+      <div class="options">
+        ${['a', 'b', 'c', 'd'].map(letter => `
+          <label class="option" data-letter="${letter}">
+            <input type="radio" name="q${i}" value="${letter}">
+            <span class="option-letter">${letter.toUpperCase()}.</span>
+            <span>${escapeHtml(q.options[letter] || '')}</span>
+          </label>
+        `).join('')}
+      </div>
+      <div class="explanation" style="display:none;">
+        <strong>${t('explanation')}:</strong> ${escapeHtml(q.explanation || '')}
+      </div>
+    `;
+    content.appendChild(qDiv);
+  });
+
+  document.getElementById('gradeBtn').style.display = 'inline-flex';
+  document.getElementById('newQuizBtn').style.display = 'inline-flex';
+  document.getElementById('printBtn').style.display = 'inline-flex';
+  document.getElementById('scoreCard').style.display = 'none';
+
+  // Scroll to quiz
+  document.getElementById('quizCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function gradeQuiz() {
+  if (!currentQuiz) return;
+  const questions = document.querySelectorAll('.question');
+  let answered = 0;
+  let correct = 0;
+
+  questions.forEach((qDiv, i) => {
+    const correctAnswer = qDiv.dataset.correct;
+    const selected = qDiv.querySelector(`input[name="q${i}"]:checked`);
+
+    if (selected) {
+      answered++;
+      const selectedLetter = selected.value;
+      const optionLabels = qDiv.querySelectorAll('.option');
+
+      optionLabels.forEach(label => {
+        const letter = label.dataset.letter;
+        if (letter === correctAnswer) {
+          label.classList.add('correct');
+        } else if (letter === selectedLetter && selectedLetter !== correctAnswer) {
+          label.classList.add('wrong');
         }
+        // Disable further changes
+        label.style.pointerEvents = 'none';
+        const input = label.querySelector('input');
+        if (input) input.disabled = true;
+      });
 
-        function hideError() {
-            errorMessage.classList.add('hidden');
-        }
+      // Show explanation
+      const expl = qDiv.querySelector('.explanation');
+      if (expl) expl.style.display = 'block';
 
-        /**
-         * NOVA FUNÇÃO: Divide um texto longo em pedaços menores.
-         * Tenta dividir em quebras de linha para manter a coerência.
-         * @param {string} text - O texto completo a ser dividido.
-         * @param {number} maxSize - O tamanho máximo de cada pedaço (em caracteres).
-         * @returns {string[]} - Um array com os pedaços de texto.
-         */
-        function chunkText(text, maxSize = 10000) { // Limite de caracteres para segurança
-            const chunks = [];
-            let currentChunk = "";
-            const sentences = text.split('\n'); // Tenta dividir por linhas primeiro
+      if (selectedLetter === correctAnswer) correct++;
+    }
+  });
 
-            for (const sentence of sentences) {
-                if ((currentChunk.length + sentence.length + 1) > maxSize) {
-                    if (currentChunk.length > 0) {
-                        chunks.push(currentChunk);
-                    }
-                    currentChunk = sentence;
-                } else {
-                    currentChunk += (currentChunk.length > 0 ? '\n' : '') + sentence;
-                }
-            }
+  if (answered < questions.length) {
+    showToast(t('select-answers'));
+    return;
+  }
 
-            if (currentChunk.length > 0) {
-                chunks.push(currentChunk);
-            }
+  // Show score
+  const scoreCard = document.getElementById('scoreCard');
+  scoreCard.style.display = 'block';
+  document.getElementById('scoreValue').textContent = `${correct}/${questions.length}`;
+  document.getElementById('gradeBtn').style.display = 'none';
 
-            return chunks;
-        }
+  scoreCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 
-        async function handleGenerateQuiz() {
-            hideError();
-            const files = fileUpload.files;
-            const totalQuestions = parseInt(numQuestionsInput.value, 10);
+function newQuiz() {
+  document.getElementById('quizCard').style.display = 'none';
+  document.getElementById('quizContent').innerHTML = '';
+  currentQuiz = null;
+  document.getElementById('topic').focus();
+}
 
-            if (files.length === 0) {
-                showError("Por favor, selecione pelo menos um arquivo.");
-                return;
-            }
+function clearAll() {
+  uploadedFiles = [];
+  currentQuiz = null;
+  document.getElementById('topic').value = '';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('quizCard').style.display = 'none';
+  document.getElementById('quizContent').innerHTML = '';
+  renderFileList();
+}
 
-            generateBtn.disabled = true;
-            loader.classList.remove('hidden');
-            loaderText.textContent = 'Lendo e processando seus arquivos...';
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
-            try {
-                const combinedText = await readFilesAsText(files);
-                if (!combinedText.trim()) {
-                    throw new Error("Não foi possível ler o conteúdo de texto dos arquivos. Por favor, use arquivos de texto simples (.txt, .md, etc).");
-                }
-                
-                // *** LÓGICA ATUALIZADA PARA LIDAR COM TEXTOS GRANDES ***
-                const textChunks = chunkText(combinedText);
-                const numChunks = textChunks.length;
-                let allGeneratedQuestions = [];
-                
-                // Distribui o número de questões entre os pedaços de texto
-                const questionsPerChunk = Math.ceil(totalQuestions / numChunks);
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2200);
+}
 
-                for (let i = 0; i < numChunks; i++) {
-                    const chunk = textChunks[i];
-                    loaderText.textContent = `A IA está analisando o material (Parte ${i + 1} de ${numChunks})...`;
-                    
-                    const generatedQuizPart = await getQuizFromAI(chunk, questionsPerChunk);
-                    allGeneratedQuestions = allGeneratedQuestions.concat(generatedQuizPart);
-                }
+// ===================== INIT =====================
+document.addEventListener('DOMContentLoaded', () => {
+  // Language
+  const savedLang = localStorage.getItem('quiz-lang') || (navigator.language || 'pt-BR');
+  const supported = Object.keys(I18N);
+  const matched = supported.find(l => savedLang.startsWith(l.split('-')[0])) || 'pt-BR';
+  document.getElementById('langSelect').value = matched;
+  applyLang(matched);
 
-                // Garante que temos o número exato de questões solicitadas
-                quizData = allGeneratedQuestions.slice(0, totalQuestions); 
-                displayQuiz(quizData);
+  document.getElementById('langSelect').addEventListener('change', (e) => {
+    localStorage.setItem('quiz-lang', e.target.value);
+    applyLang(e.target.value);
+  });
 
-            } catch (error) {
-                console.error("Erro ao gerar a prova:", error);
-                showError(error.message || "Ocorreu um erro desconhecido. Tente novamente.");
-            } finally {
-                loader.classList.add('hidden');
-            }
-        }
+  // File input
+  const fileInput = document.getElementById('fileInput');
+  const fileZone = document.querySelector('.file-zone');
 
-        function readFilesAsText(files) {
-            return new Promise((resolve) => {
-                let combinedText = '';
-                let filesToRead = files.length;
-                if (filesToRead === 0) resolve('');
+  fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
-                for (const file of files) {
-                    if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.csv')) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            combinedText += `\n\n--- Conteúdo do arquivo: ${file.name} ---\n\n` + e.target.result;
-                            filesToRead--;
-                            if (filesToRead === 0) resolve(combinedText);
-                        };
-                        reader.onerror = () => {
-                             console.warn(`Não foi possível ler o arquivo ${file.name}.`);
-                            filesToRead--;
-                            if (filesToRead === 0) resolve(combinedText);
-                        };
-                        reader.readAsText(file);
-                    } else {
-                        console.warn(`Arquivo '${file.name}' ignorado por não ser um tipo de texto conhecido.`);
-                        filesToRead--;
-                        if (filesToRead === 0) resolve(combinedText);
-                    }
-                }
-            });
-        }
-        
-        async function getQuizFromAI(text, numQuestions) {
-            const prompt = `
-                Haja como um professor universitário rigoroso e experiente.
-                Use exclusivamente o material fornecido abaixo para criar uma prova com exatamente ${numQuestions} questões de múltipla escolha.
-                
-                REGRAS ESTRITAS:
-                1. Cada questão deve ter 4 opções: a, b, c, d.
-                2. Para cada questão, forneça uma dica útil, mas que não entregue a resposta diretamente.
-                3. A resposta correta deve ser claramente indicada.
-                4. As perguntas devem ser desafiadoras e baseadas nos detalhes do texto.
-                5. Sua resposta DEVE SER um objeto JSON válido, contendo uma única chave "questoes", que é um array de objetos.
-                6. Cada objeto no array deve ter as chaves: "pergunta", "opcoes" (um objeto com chaves "a", "b", "c", "d"), "resposta_correta" (a letra da opção correta, ex: "a"), e "dica".
-                
-                MATERIAL DE ESTUDO:
-                ---
-                ${text}
-                ---
-            `;
+  fileZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    fileZone.classList.add('dragging');
+  });
+  fileZone.addEventListener('dragleave', () => fileZone.classList.remove('dragging'));
+  fileZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fileZone.classList.remove('dragging');
+    handleFiles(e.dataTransfer.files);
+  });
 
-            const payload = {
-                model: "gpt-3.5-turbo",
-                messages: [{ role: "user", content: prompt }],
-                temperature: 0.5,
-                response_format: { type: "json_object" }
-            };
-            
-            const response = await fetch(BASE_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${API_KEY}`
-                },
-                body: JSON.stringify(payload)
-            });
+  // Buttons
+  document.getElementById('generateBtn').addEventListener('click', generateQuiz);
+  document.getElementById('clearBtn').addEventListener('click', clearAll);
+  document.getElementById('gradeBtn').addEventListener('click', gradeQuiz);
+  document.getElementById('newQuizBtn').addEventListener('click', newQuiz);
+  document.getElementById('printBtn').addEventListener('click', () => window.print());
+});
+</script>
 
-            if (!response.ok) {
-                const errorBody = await response.json();
-                console.error("Erro da API:", errorBody);
-                throw new Error(`Erro na comunicação com a API: ${errorBody.error.message || response.statusText}`);
-            }
-
-            const data = await response.json();
-            
-            try {
-                const content = JSON.parse(data.choices[0].message.content);
-                if (!content.questoes || !Array.isArray(content.questoes)) {
-                    throw new Error("Formato de JSON inesperado recebido da IA.");
-                }
-                return content.questoes;
-            } catch (e) {
-                console.error("Erro ao parsear JSON da IA:", e);
-                console.log("Resposta bruta da IA:", data.choices[0].message.content);
-                throw new Error("A IA retornou uma resposta em um formato inválido. Tente novamente.");
-            }
-        }
-        
-        function displayQuiz(quiz) {
-            quizContainer.innerHTML = '';
-            if (quiz.length === 0) {
-                 showError("A IA não conseguiu gerar questões com o material fornecido. Tente usar arquivos diferentes ou mais detalhados.");
-                 handleRestart(); // volta para a tela inicial
-                 return;
-            }
-
-            quiz.forEach((q, index) => {
-                const optionsHTML = Object.entries(q.opcoes).map(([key, value]) => `
-                    <label class="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
-                        <input type="radio" name="question-${index}" value="${key}" class="mr-3">
-                        <span class="font-medium">${key.toUpperCase()})</span> ${value}
-                    </label>
-                `).join('');
-
-                const questionElement = document.createElement('div');
-                questionElement.className = 'question-block';
-                questionElement.innerHTML = `
-                    <p class="text-lg font-semibold mb-4">${index + 1}. ${q.pergunta}</p>
-                    <div class="space-y-3">${optionsHTML}</div>
-                    <button class="hint-btn mt-4 text-sm text-blue-600 hover:underline">Mostrar Dica</button>
-                    <p class="hint-text hidden mt-2 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-sm">${q.dica}</p>
-                `;
-                quizContainer.appendChild(questionElement);
-            });
-            
-            document.querySelectorAll('.hint-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const hint = btn.nextElementSibling;
-                    hint.classList.toggle('hidden');
-                    btn.textContent = hint.classList.contains('hidden') ? 'Mostrar Dica' : 'Ocultar Dica';
-                });
-            });
-
-            setupSection.classList.add('hidden');
-            quizSection.classList.remove('hidden');
-        }
-        
-        function handleSubmitQuiz() {
-            let score = 0;
-            const reviewContainer = document.getElementById('review-container');
-            reviewContainer.innerHTML = ''; // Limpa resultados anteriores
-
-            // Coleta todas as respostas do usuário
-            const userAnswers = quizData.map((_, index) => {
-                const selected = document.querySelector(`input[name="question-${index}"]:checked`);
-                return selected ? selected.value : null;
-            });
-
-            // Calcula a pontuação
-            userAnswers.forEach((answer, index) => {
-                if (answer === quizData[index].resposta_correta) {
-                    score++;
-                }
-            });
-
-            // Exibe a pontuação
-            scoreElement.textContent = `Você acertou ${score} de ${quizData.length}!`;
-
-            // Constrói a seção de revisão detalhada
-            quizData.forEach((q, index) => {
-                const userAnswer = userAnswers[index];
-                const correctAnswer = q.resposta_correta;
-
-                const optionsHTML = Object.entries(q.opcoes).map(([key, value]) => {
-                    let itemClass = 'p-3 rounded-lg border';
-                    const isCorrect = key === correctAnswer;
-                    const isSelected = key === userAnswer;
-
-                    if (isCorrect) {
-                        itemClass += ' bg-green-100 border-green-400 font-bold';
-                    } else if (isSelected && !isCorrect) {
-                        itemClass += ' bg-red-100 border-red-400 line-through';
-                    } else {
-                        itemClass += ' border-gray-200 text-gray-600';
-                    }
-                    
-                    return `<li class="${itemClass}">${key.toUpperCase()}) ${value}</li>`;
-                }).join('');
-
-                const questionReviewHTML = `
-                    <div class="mb-6 p-4 border rounded-lg bg-white shadow-sm">
-                        <p class="text-lg font-semibold mb-4">${index + 1}. ${q.pergunta}</p>
-                        <ul class="space-y-3">${optionsHTML}</ul>
-                        ${userAnswer !== correctAnswer && userAnswer !== null ? `<p class="mt-4 text-sm text-red-700 p-2 bg-red-50 rounded-md">Sua resposta (${userAnswer.toUpperCase()}) está incorreta. A resposta correta é <strong>${correctAnswer.toUpperCase()}</strong>.</p>` : ''}
-                        ${userAnswer === correctAnswer ? `<p class="mt-4 text-sm text-green-700 p-2 bg-green-50 rounded-md">Você acertou!</p>` : ''}
-                        ${userAnswer === null ? `<p class="mt-4 text-sm text-yellow-800 p-2 bg-yellow-50 rounded-md">Você não respondeu a esta questão. A resposta correta é <strong>${correctAnswer.toUpperCase()}</strong>.</p>` : ''}
-                    </div>
-                `;
-                reviewContainer.innerHTML += questionReviewHTML;
-            });
-
-            quizSection.classList.add('hidden');
-            resultsSection.classList.remove('hidden');
-            window.scrollTo(0, 0);
-        }
-        
-        function handleRestart() {
-            quizData = [];
-            fileUpload.value = '';
-            fileList.innerHTML = '';
-            numQuestionsInput.value = '5';
-            quizContainer.innerHTML = '';
-            document.getElementById('review-container').innerHTML = ''; // Limpa a revisão
-            
-            resultsSection.classList.add('hidden');
-            setupSection.classList.add('hidden');
-            setupSection.classList.remove('hidden'); // Corrigido para voltar à tela inicial
-            generateBtn.disabled = false;
-            hideError();
-        }
-
-        generateBtn.addEventListener('click', handleGenerateQuiz);
-        submitBtn.addEventListener('click', handleSubmitQuiz);
-        restartBtn.addEventListener('click', handleRestart);
-
-    </script>
 </body>
 </html>
