@@ -470,7 +470,7 @@
     <div class="row">
       <div>
         <label data-i18n="num-label">Número de questões</label>
-        <input type="number" id="numQuestions" value="5" min="1" max="15">
+        <input type="number" id="numQuestions" value="5" min="1" max="50">
       </div>
       <div>
         <label data-i18n="level-label">Nível de dificuldade</label>
@@ -576,6 +576,7 @@ const I18N = {
     'correct': 'Correta',
     'wrong': 'Errada',
     'explanation': 'Explicação',
+      'hint': 'Dica',
   },
   en: {
     title: 'AI Quiz Generator',
@@ -610,6 +611,7 @@ const I18N = {
     'correct': 'Correct',
     'wrong': 'Wrong',
     'explanation': 'Explanation',
+      'hint': 'Hint',
   },
   es: {
     title: 'Generador de Exámenes con IA',
@@ -644,6 +646,7 @@ const I18N = {
     'correct': 'Correcta',
     'wrong': 'Incorrecta',
     'explanation': 'Explicación',
+      'hint': 'Pista',
   },
   fr: {
     title: 'Générateur d\'Examens IA',
@@ -678,6 +681,7 @@ const I18N = {
     'correct': 'Correcte',
     'wrong': 'Incorrecte',
     'explanation': 'Explication',
+      'hint': 'Indice',
   },
   de: {
     title: 'KI-Prüfungsgenerator',
@@ -712,6 +716,7 @@ const I18N = {
     'correct': 'Richtig',
     'wrong': 'Falsch',
     'explanation': 'Erklärung',
+      'hint': 'Tipp',
   },
   it: {
     title: 'Generatore di Esami IA',
@@ -746,6 +751,7 @@ const I18N = {
     'correct': 'Corretta',
     'wrong': 'Sbagliata',
     'explanation': 'Spiegazione',
+      'hint': 'Suggerimento',
   },
   ja: {
     title: 'AIテストジェネレーター',
@@ -780,6 +786,7 @@ const I18N = {
     'correct': '正解',
     'wrong': '不正解',
     'explanation': '解説',
+      'hint': 'ヒント',
   },
   'zh-CN': {
     title: 'AI 测试生成器',
@@ -814,6 +821,7 @@ const I18N = {
     'correct': '正确',
     'wrong': '错误',
     'explanation': '解释',
+      'hint': '提示',
   }
 };
 
@@ -848,8 +856,10 @@ async function callAI(messages) {
     body: JSON.stringify({
       model: 'openai-fast',
       messages,
-      temperature: 0.7,
-      max_tokens: 2500,
+      temperature: 0.5,
+      max_tokens: 3500,
+      reasoning: { effort: 'none' },
+      stream: false,
     }),
   });
   if (!res.ok) throw new Error('Pollinations error: ' + res.status);
@@ -912,18 +922,31 @@ async function generateQuiz() {
   const lang = document.documentElement.lang || 'pt-BR';
   const langName = { 'pt-BR': 'Portuguese (Brazil)', en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', ja: 'Japanese', 'zh-CN': 'Chinese (Simplified)' }[lang] || 'English';
 
-  const systemPrompt = `You are a quiz generator. Create educational quizzes in ${langName}. Always respond with valid JSON only — no markdown, no code blocks, just the JSON object.`;
+  const systemPrompt = `You are a university professor creating rigorous educational quizzes in ${langName}. You ALWAYS respond with valid JSON only — no markdown, no code fences, just the JSON object.
+
+CRITICAL RULES:
+- Base questions ONLY on the study material provided (when available)
+- Questions must be challenging but fair
+- Each question must test understanding, not just memorization
+- Wrong options (distractors) must be plausible — never obviously wrong
+- The hint should help the student think, NOT give away the answer
+- All output must be in ${langName}`;
 
   const userPrompt = `Create a quiz with the following specifications:
 - Number of questions: ${numQ}
 - Difficulty: ${level}
 - Topic: ${topic || '(derived from the study files)'}
-${context ? `- Study material context:\n${context.slice(0, 6000)}` : ''}
+${context ? `- Study material context (use ONLY this material for the questions):\n${context.slice(0, 8000)}` : ''}
 
-Each question should have 4 options (a, b, c, d) with exactly one correct answer.
-Include a brief explanation for why the correct answer is right.
+STRICT REQUIREMENTS:
+1. Each question must have EXACTLY 4 options: a, b, c, d
+2. Only ONE correct answer per question
+3. For each question, provide a HINT that helps the student think — but does NOT reveal the answer directly
+4. The 3 wrong options must be PLAUSIBLE (common misconceptions, similar concepts, etc.) — never obviously wrong
+5. Questions should test UNDERSTANDING, not just memorization
+6. Vary the question types: definitions, applications, scenarios, comparisons
 
-Respond ONLY with this JSON format (no markdown, no code fences):
+Respond ONLY with this JSON format (no markdown, no code fences, no preamble):
 {
   "questions": [
     {
@@ -935,7 +958,8 @@ Respond ONLY with this JSON format (no markdown, no code fences):
         "d": "Option D text"
       },
       "correct": "a",
-      "explanation": "Brief explanation why 'a' is correct"
+      "hint": "A hint that guides thinking without revealing the answer",
+      "explanation": "Detailed explanation of why 'a' is correct AND why the others are wrong"
     }
   ]
 }`;
@@ -977,6 +1001,11 @@ function renderQuiz(quiz) {
     const qDiv = document.createElement('div');
     qDiv.className = 'question';
     qDiv.dataset.correct = q.correct;
+    const hintHtml = q.hint ? `
+      <div class="hint" style="margin-left:40px;margin-top:8px;padding:8px 12px;background:rgba(251,191,36,0.08);border-left:3px solid var(--warning);border-radius:6px;font-size:12px;color:var(--text-dim);">
+        <strong style="color:var(--warning);">💡 ${t('hint')}:</strong> ${escapeHtml(q.hint)}
+      </div>
+    ` : '';
     qDiv.innerHTML = `
       <div class="question-header">
         <div class="question-num">${i + 1}</div>
@@ -991,6 +1020,7 @@ function renderQuiz(quiz) {
           </label>
         `).join('')}
       </div>
+      ${hintHtml}
       <div class="explanation" style="display:none;">
         <strong>${t('explanation')}:</strong> ${escapeHtml(q.explanation || '')}
       </div>
